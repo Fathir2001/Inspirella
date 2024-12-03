@@ -48,7 +48,7 @@ class _FloatingEmojiState extends State<FloatingEmoji> with SingleTickerProvider
             opacity: 1 - _controller.value,
             child: Text(
               widget.emoji,
-              style: TextStyle(fontSize: 24),
+              style: TextStyle(fontSize: 35),
             ),
           ),
         );
