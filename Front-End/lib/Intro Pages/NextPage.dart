@@ -35,6 +35,31 @@ class _NextPageState extends State<NextPage> {
       'mood': 'Love',
       'color': Colors.pink[200],
     },
+    {
+      'emoji': '🤔',
+      'mood': 'Thoughtful',
+      'color': Colors.indigo[200],
+    },
+    {
+      'emoji': '😎',
+      'mood': 'Confident',
+      'color': Colors.teal[200],
+    },
+    {
+      'emoji': '🤩',
+      'mood': 'Excited',
+      'color': Colors.orange[200],
+    },
+    {
+      'emoji': '😴',
+      'mood': 'Tired',
+      'color': Colors.grey[200],
+    },
+    {
+      'emoji': '😟',
+      'mood': 'Anxious',
+      'color': Colors.purple[200],
+    },
   ];
 
   int selectedMoodIndex = -1;
@@ -43,6 +68,7 @@ class _NextPageState extends State<NextPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       body: Container(
+        height: MediaQuery.of(context).size.height,
         decoration: BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topRight,
@@ -51,113 +77,142 @@ class _NextPageState extends State<NextPage> {
           ),
         ),
         child: SafeArea(
-          child: Column(
+          child: Stack(
             children: [
-              Padding(
-                padding: EdgeInsets.all(20),
-                child: Text(
-                  "How are you feeling today?",
-                  style: TextStyle(
-                    fontSize: 28,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.black87,
+              SingleChildScrollView(
+                physics: AlwaysScrollableScrollPhysics(),
+                child: Padding(
+                  padding: EdgeInsets.only(
+                    bottom: MediaQuery.of(context).padding.bottom + 100, // Extra space for button
                   ),
-                ),
-              ),
-              Expanded(
-                child: ListView.builder(
-                  padding: EdgeInsets.symmetric(horizontal: 20),
-                  itemCount: moods.length,
-                  itemBuilder: (context, index) {
-                    return TweenAnimationBuilder(
-                      tween: Tween<double>(begin: 0, end: 1),
-                      duration: Duration(milliseconds: 500 + (index * 200)),
-                      builder: (context, double value, child) {
-                        return Transform.translate(
-                          offset: Offset(0, 50 * (1 - value)),
-                          child: Opacity(
-                            opacity: value,
-                            child: child,
-                          ),
-                        );
-                      },
-                      child: GestureDetector(
-                        onTap: () {
-                          setState(() {
-                            selectedMoodIndex = index;
-                          });
-                        },
-                        child: Container(
-                          margin: EdgeInsets.only(bottom: 15),
-                          padding: EdgeInsets.all(20),
-                          decoration: BoxDecoration(
-                            color: selectedMoodIndex == index
-                                ? moods[index]['color']
-                                : Colors.white,
-                            borderRadius: BorderRadius.circular(15),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black12,
-                                blurRadius: 10,
-                                offset: Offset(0, 5),
-                              ),
-                            ],
-                          ),
-                          child: Row(
-                            children: [
-                              Text(
-                                moods[index]['emoji'],
-                                style: TextStyle(fontSize: 40),
-                              ),
-                              SizedBox(width: 20),
-                              Text(
-                                moods[index]['mood'],
-                                style: TextStyle(
-                                  fontSize: 20,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                              Spacer(),
-                              if (selectedMoodIndex == index)
-                                Icon(Icons.check_circle,
-                                    color: Colors.green.shade700),
-                            ],
+                  child: Column(
+                    children: [
+                      Padding(
+                        padding: EdgeInsets.all(20),
+                        child: Text(
+                          "How are you feeling today?",
+                          style: TextStyle(
+                            fontSize: 28,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.black87,
                           ),
                         ),
                       ),
-                    );
-                  },
+                      ListView.builder(
+                        padding: EdgeInsets.symmetric(horizontal: 20),
+                        physics: NeverScrollableScrollPhysics(),
+                        shrinkWrap: true,
+                        itemCount: moods.length,
+                        itemBuilder: (context, index) {
+                          return TweenAnimationBuilder(
+                            tween: Tween<double>(begin: 0, end: 1),
+                            duration: Duration(milliseconds: 500 + (index * 200)),
+                            builder: (context, double value, child) {
+                              return Transform.translate(
+                                offset: Offset(0, 50 * (1 - value)),
+                                child: Opacity(
+                                  opacity: value,
+                                  child: child,
+                                ),
+                              );
+                            },
+                            child: GestureDetector(
+                              onTap: () {
+                                setState(() {
+                                  selectedMoodIndex = index;
+                                });
+                              },
+                              child: Container(
+                                margin: EdgeInsets.only(bottom: 15),
+                                padding: EdgeInsets.all(20),
+                                decoration: BoxDecoration(
+                                  color: selectedMoodIndex == index
+                                      ? moods[index]['color']
+                                      : Colors.white,
+                                  borderRadius: BorderRadius.circular(15),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black12,
+                                      blurRadius: 10,
+                                      offset: Offset(0, 5),
+                                    ),
+                                  ],
+                                ),
+                                child: Row(
+                                  children: [
+                                    Text(
+                                      moods[index]['emoji'],
+                                      style: TextStyle(fontSize: 40),
+                                    ),
+                                    SizedBox(width: 20),
+                                    Text(
+                                      moods[index]['mood'],
+                                      style: TextStyle(
+                                        fontSize: 20,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                    Spacer(),
+                                    if (selectedMoodIndex == index)
+                                      Icon(Icons.check_circle,
+                                          color: Colors.green.shade700),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    ],
+                  ),
                 ),
               ),
-              Padding(
-                padding: EdgeInsets.all(20),
+              Positioned(
+                left: 20,
+                right: 20,
+                bottom: 20,
                 child: AnimatedOpacity(
                   duration: Duration(milliseconds: 300),
                   opacity: selectedMoodIndex != -1 ? 1.0 : 0.0,
-                  child: ElevatedButton(
-                    onPressed: selectedMoodIndex != -1
-                        ? () {
-                            // Navigate to main app
-                            Navigator.pushReplacement(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => HomePage(mood: moods[selectedMoodIndex]['mood']),
-                              ),
-                            );
-                          }
-                        : null,
-                    child: Padding(
-                      padding:
-                          EdgeInsets.symmetric(horizontal: 40, vertical: 15),
-                      child: Text(
-                        'Continue',
-                        style: TextStyle(fontSize: 18),
-                      ),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black12,
+                          blurRadius: 10,
+                          offset: Offset(0, -5),
+                        ),
+                      ],
                     ),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.purple.shade300,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(30),
+                    child: ElevatedButton(
+                      onPressed: selectedMoodIndex != -1
+                          ? () {
+                              Navigator.pushReplacement(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) =>
+                                      HomePage(mood: moods[selectedMoodIndex]['mood']),
+                                ),
+                              );
+                            }
+                          : null,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.purple.shade300,
+                        padding: EdgeInsets.symmetric(vertical: 15),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(30),
+                        ),
+                        elevation: 5,
+                      ),
+                      child: Text(
+                        selectedMoodIndex != -1
+                            ? 'Continue with ${moods[selectedMoodIndex]['mood']}'
+                            : 'Select a mood',
+                        style: TextStyle(
+                          fontSize: 18,
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                     ),
                   ),

@@ -1,7 +1,9 @@
 // home_page.dart
-
 import 'package:flutter/material.dart';
 import 'package:card_swiper/card_swiper.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 
 class HomePage extends StatefulWidget {
   final String mood;
@@ -13,33 +15,45 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  final Map<String, List<String>> moodQuotes = {
-    'Happy': [
-      "The simplest things in life bring the greatest joy.",
-      "Happiness is not something ready-made. It comes from your own actions.",
-      "Smile, it's free therapy.",
-    ],
-    'Sad': [
-      "Even the darkest night will end and the sun will rise.",
-      "Pain makes you stronger, tears make you braver.",
-      "Every storm runs out of rain.",
-    ],
-    'Calm': [
-      "Peace comes from within.",
-      "Breathe in peace, breathe out stress.",
-      "Stillness is where creativity and solutions are found.",
-    ],
-    'Angry': [
-      "Anger is a valid emotion, but a poor master.",
-      "The greatest remedy for anger is delay.",
-      "Count to ten and breathe deeply.",
-    ],
-    'Love': [
-      "Love yourself first and everything else falls into line.",
-      "Where there is love there is life.",
-      "The best thing to hold onto in life is each other.",
-    ],
-  };
+  Map<String, List<String>> moodQuotes = {};
+  bool isLoading = true;
+  String? error;
+
+  @override
+  void initState() {
+    super.initState();
+    loadQuotes();
+  }
+
+  Future<void> loadQuotes() async {
+    try {
+      final url = dotenv.env['S3_URL'];
+      if (url == null) throw Exception('S3_URL not found in environment');
+      
+      final response = await http.get(Uri.parse(url));
+      if (response.statusCode != 200) {
+        throw Exception('Failed to load quotes: ${response.statusCode}');
+      }
+
+      final data = json.decode(response.body);
+      setState(() {
+        moodQuotes = Map<String, List<String>>.from(
+          data.map((key, value) => MapEntry(
+            key,
+            List<String>.from(value),
+          )),
+        );
+        isLoading = false;
+        error = null;
+      });
+    } catch (e) {
+      print('Error loading quotes: $e');
+      setState(() {
+        isLoading = false;
+        error = e.toString();
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -47,6 +61,10 @@ class _HomePageState extends State<HomePage> {
       appBar: AppBar(
         elevation: 0,
         backgroundColor: Colors.transparent,
+        leading: IconButton(
+          icon: Icon(Icons.arrow_back, color: Colors.black87),
+          onPressed: () => Navigator.of(context).pop(),
+        ),
         title: Row(
           children: [
             Text(
@@ -56,7 +74,7 @@ class _HomePageState extends State<HomePage> {
             Text(
               "${widget.mood}",
               style: TextStyle(
-                color: Colors.purple.shade400,
+                color: _getMoodColor(widget.mood),
                 fontWeight: FontWeight.bold,
               ),
             ),
@@ -66,7 +84,11 @@ class _HomePageState extends State<HomePage> {
           IconButton(
             icon: Icon(Icons.refresh, color: Colors.black87),
             onPressed: () {
-              setState(() {});
+              setState(() {
+                isLoading = true;
+                error = null;
+              });
+              loadQuotes();
             },
           ),
         ],
@@ -79,15 +101,45 @@ class _HomePageState extends State<HomePage> {
             colors: [Colors.white, Colors.purple.shade50],
           ),
         ),
-        child: Swiper(
-          itemBuilder: (BuildContext context, int index) {
-            return _buildQuoteCard(moodQuotes[widget.mood]![index]);
-          },
-          itemCount: moodQuotes[widget.mood]!.length,
-          layout: SwiperLayout.TINDER,
-          itemWidth: MediaQuery.of(context).size.width * 0.85,
-          itemHeight: MediaQuery.of(context).size.height * 0.7,
-        ),
+        child: isLoading 
+            ? Center(child: CircularProgressIndicator())
+            : error != null
+                ? Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          'Failed to load quotes',
+                          style: TextStyle(fontSize: 18, color: Colors.red),
+                        ),
+                        SizedBox(height: 10),
+                        ElevatedButton(
+                          onPressed: () {
+                            setState(() {
+                              isLoading = true;
+                              error = null;
+                            });
+                            loadQuotes();
+                          },
+                          child: Text('Retry'),
+                        ),
+                      ],
+                    ),
+                  )
+                : moodQuotes.isEmpty || (moodQuotes[widget.mood]?.isEmpty ?? true)
+                    ? Center(
+                        child: Text('No quotes available for this mood'),
+                      )
+                    : Swiper(
+                        itemBuilder: (BuildContext context, int index) {
+                          return _buildQuoteCard(
+                              moodQuotes[widget.mood]![index]);
+                        },
+                        itemCount: moodQuotes[widget.mood]?.length ?? 0,
+                        layout: SwiperLayout.TINDER,
+                        itemWidth: MediaQuery.of(context).size.width * 0.85,
+                        itemHeight: MediaQuery.of(context).size.height * 0.7,
+                      ),
       ),
     );
   }
@@ -147,35 +199,33 @@ class _HomePageState extends State<HomePage> {
 
   Color _getMoodColor(String mood) {
     switch (mood) {
-      case 'Happy':
-        return Colors.yellow.shade600;
-      case 'Sad':
-        return Colors.blue.shade400;
-      case 'Calm':
-        return Colors.green.shade400;
-      case 'Angry':
-        return Colors.red.shade400;
-      case 'Love':
-        return Colors.pink.shade400;
-      default:
-        return Colors.purple.shade400;
+      case 'Happy': return Colors.yellow.shade600;
+      case 'Sad': return Colors.blue.shade400;
+      case 'Calm': return Colors.green.shade400;
+      case 'Angry': return Colors.red.shade400;
+      case 'Love': return Colors.pink.shade400;
+      case 'Thoughtful': return Colors.indigo.shade400;
+      case 'Confident': return Colors.teal.shade400;
+      case 'Excited': return Colors.orange.shade400;
+      case 'Tired': return Colors.grey.shade400;
+      case 'Anxious': return Colors.purple.shade400;
+      default: return Colors.purple.shade400;
     }
   }
 
   IconData _getMoodIcon(String mood) {
     switch (mood) {
-      case 'Happy':
-        return Icons.sentiment_very_satisfied;
-      case 'Sad':
-        return Icons.sentiment_very_dissatisfied;
-      case 'Calm':
-        return Icons.spa;
-      case 'Angry':
-        return Icons.mood_bad;
-      case 'Love':
-        return Icons.favorite;
-      default:
-        return Icons.mood;
+      case 'Happy': return Icons.sentiment_very_satisfied;
+      case 'Sad': return Icons.sentiment_very_dissatisfied;
+      case 'Calm': return Icons.spa;
+      case 'Angry': return Icons.mood_bad;
+      case 'Love': return Icons.favorite;
+      case 'Thoughtful': return Icons.psychology;
+      case 'Confident': return Icons.star;
+      case 'Excited': return Icons.celebration;
+      case 'Tired': return Icons.bedtime;
+      case 'Anxious': return Icons.warning_amber;
+      default: return Icons.mood;
     }
   }
 }
