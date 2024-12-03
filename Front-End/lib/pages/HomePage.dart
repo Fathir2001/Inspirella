@@ -2,6 +2,8 @@
 
 import 'package:flutter/material.dart';
 import 'package:card_swiper/card_swiper.dart';
+import 'package:flutter/services.dart' show rootBundle;
+import 'dart:convert';
 
 class HomePage extends StatefulWidget {
   final String mood;
@@ -13,78 +15,35 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  final Map<String, List<String>> moodQuotes = {
-    'Happy': [
-      "The simplest things in life bring the greatest joy.",
-      "Happiness is when what you think, what you say, and what you do are in harmony.",
-      "The most wasted of all days is one without laughter.",
-      "Happiness is not something ready-made. It comes from your own actions.",
-      "Don't worry, be happy!",
-    ],
-    'Sad': [
-      "Even the darkest night will end and the sun will rise.",
-      "Pain makes you stronger, tears make you braver, heartbreak makes you wiser.",
-      "Every storm runs out of rain.",
-      "Behind every cloud is another cloud with a silver lining.",
-      "Tears are words the heart can't express.",
-    ],
-    'Calm': [
-      "Peace comes from within. Do not seek it without.",
-      "Breathe in peace, breathe out stress.",
-      "Stillness is where creativity and solutions are found.",
-      "The calm mind is the ultimate weapon against your challenges.",
-      "In the midst of movement and chaos, keep stillness inside of you.",
-    ],
-    'Angry': [
-      "Anger is a valid emotion, but a poor master.",
-      "The greatest remedy for anger is delay.",
-      "For every minute you are angry you lose sixty seconds of happiness.",
-      "Speak when you are angry and you will make the best speech you will ever regret.",
-      "When angry, count to ten before you speak.",
-    ],
-    'Love': [
-      "Love yourself first and everything else falls into line.",
-      "Where there is love there is life.",
-      "The best thing to hold onto in life is each other.",
-      "Love is not what you say. Love is what you do.",
-      "The greatest happiness of life is the conviction that we are loved.",
-    ],
-    'Thoughtful': [
-      "The world as we have created it is a process of our thinking.",
-      "Those who know how to think need no teachers.",
-      "Think before you speak. Read before you think.",
-      "The mind is everything. What you think you become.",
-      "Thinking is difficult, that's why most people judge.",
-    ],
-    'Confident': [
-      "Confidence is not 'they will like me'. It's 'I'll be fine if they don't'.",
-      "Your success will be determined by your own confidence and fortitude.",
-      "When you have confidence, you can have a lot of fun.",
-      "Confidence comes not from always being right but from not fearing to be wrong.",
-      "Self-confidence is the first requisite to great undertakings.",
-    ],
-    'Excited': [
-      "Life is either a daring adventure or nothing at all.",
-      "Adventure is worthwhile in itself.",
-      "Get excited about the little things, because one day you'll look back and realize they were the big things.",
-      "Follow your excitement. It's the universe showing you your next step.",
-      "Life is short. Do stuff that matters. Do stuff that's exciting.",
-    ],
-    'Tired': [
-      "Rest when you're weary. Refresh and renew yourself, your body, your mind, your spirit.",
-      "Sometimes the most productive thing you can do is rest.",
-      "Your body is telling you it needs a break. Listen to it.",
-      "Sleep is the best meditation.",
-      "Even the strongest minds need rest.",
-    ],
-    'Anxious': [
-      "Anxiety does not empty tomorrow of its sorrows, but only empties today of its strength.",
-      "Trust yourself. You've survived a lot, and you'll survive whatever is coming.",
-      "Don't believe every worried thought you have. Worried thoughts are notoriously inaccurate.",
-      "Take life day by day and be gentle with yourself.",
-      "Anxiety is like a rocking chair. It gives you something to do but never gets you anywhere.",
-    ],
-};
+  Map<String, List<String>> moodQuotes = {};
+  bool isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    loadQuotes();
+  }
+
+  Future<void> loadQuotes() async {
+    try {
+      final String response = await rootBundle.loadString('assets/quotes.json');
+      final data = await json.decode(response);
+      setState(() {
+        moodQuotes = Map<String, List<String>>.from(
+          data.map((key, value) => MapEntry(
+            key,
+            List<String>.from(value),
+          )),
+        );
+        isLoading = false;
+      });
+    } catch (e) {
+      print('Error loading quotes: $e');
+      setState(() {
+        isLoading = false;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -92,6 +51,10 @@ class _HomePageState extends State<HomePage> {
       appBar: AppBar(
         elevation: 0,
         backgroundColor: Colors.transparent,
+        leading: IconButton(
+          icon: Icon(Icons.arrow_back, color: Colors.black87),
+          onPressed: () => Navigator.of(context).pop(),
+        ),
         title: Row(
           children: [
             Text(
@@ -101,7 +64,7 @@ class _HomePageState extends State<HomePage> {
             Text(
               "${widget.mood}",
               style: TextStyle(
-                color: Colors.purple.shade400,
+                color: _getMoodColor(widget.mood),
                 fontWeight: FontWeight.bold,
               ),
             ),
@@ -124,15 +87,22 @@ class _HomePageState extends State<HomePage> {
             colors: [Colors.white, Colors.purple.shade50],
           ),
         ),
-        child: Swiper(
-          itemBuilder: (BuildContext context, int index) {
-            return _buildQuoteCard(moodQuotes[widget.mood]![index]);
-          },
-          itemCount: moodQuotes[widget.mood]!.length,
-          layout: SwiperLayout.TINDER,
-          itemWidth: MediaQuery.of(context).size.width * 0.85,
-          itemHeight: MediaQuery.of(context).size.height * 0.7,
-        ),
+        child: isLoading
+            ? Center(child: CircularProgressIndicator())
+            : moodQuotes.isEmpty
+                ? Center(
+                    child: Text('Failed to load quotes'),
+                  )
+                : Swiper(
+                    itemBuilder: (BuildContext context, int index) {
+                      return _buildQuoteCard(
+                          moodQuotes[widget.mood]?[index] ?? "No quote available");
+                    },
+                    itemCount: moodQuotes[widget.mood]?.length ?? 0,
+                    layout: SwiperLayout.TINDER,
+                    itemWidth: MediaQuery.of(context).size.width * 0.85,
+                    itemHeight: MediaQuery.of(context).size.height * 0.7,
+                  ),
       ),
     );
   }
