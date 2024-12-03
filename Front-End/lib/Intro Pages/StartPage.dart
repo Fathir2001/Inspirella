@@ -88,7 +88,7 @@ class _StartPageState extends State<StartPage> with SingleTickerProviderStateMix
                       AnimatedTextKit(
                         animatedTexts: [
                           TypewriterAnimatedText(
-                            'MoodQuotes',
+                            'Inspirella',
                             textStyle: TextStyle(
                               fontSize: 36,
                               fontWeight: FontWeight.bold,
