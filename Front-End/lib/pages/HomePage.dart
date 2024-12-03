@@ -1,8 +1,8 @@
 // home_page.dart
-
 import 'package:flutter/material.dart';
 import 'package:card_swiper/card_swiper.dart';
-import 'package:flutter/services.dart' show rootBundle;
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:http/http.dart' as http;
 import 'dart:convert';
 
 class HomePage extends StatefulWidget {
@@ -17,6 +17,7 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
   Map<String, List<String>> moodQuotes = {};
   bool isLoading = true;
+  String? error;
 
   @override
   void initState() {
@@ -26,8 +27,15 @@ class _HomePageState extends State<HomePage> {
 
   Future<void> loadQuotes() async {
     try {
-      final String response = await rootBundle.loadString('assets/quotes.json');
-      final data = await json.decode(response);
+      final url = dotenv.env['S3_URL'];
+      if (url == null) throw Exception('S3_URL not found in environment');
+      
+      final response = await http.get(Uri.parse(url));
+      if (response.statusCode != 200) {
+        throw Exception('Failed to load quotes: ${response.statusCode}');
+      }
+
+      final data = json.decode(response.body);
       setState(() {
         moodQuotes = Map<String, List<String>>.from(
           data.map((key, value) => MapEntry(
@@ -36,11 +44,13 @@ class _HomePageState extends State<HomePage> {
           )),
         );
         isLoading = false;
+        error = null;
       });
     } catch (e) {
       print('Error loading quotes: $e');
       setState(() {
         isLoading = false;
+        error = e.toString();
       });
     }
   }
@@ -74,7 +84,11 @@ class _HomePageState extends State<HomePage> {
           IconButton(
             icon: Icon(Icons.refresh, color: Colors.black87),
             onPressed: () {
-              setState(() {});
+              setState(() {
+                isLoading = true;
+                error = null;
+              });
+              loadQuotes();
             },
           ),
         ],
@@ -87,22 +101,45 @@ class _HomePageState extends State<HomePage> {
             colors: [Colors.white, Colors.purple.shade50],
           ),
         ),
-        child: isLoading
+        child: isLoading 
             ? Center(child: CircularProgressIndicator())
-            : moodQuotes.isEmpty
+            : error != null
                 ? Center(
-                    child: Text('Failed to load quotes'),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          'Failed to load quotes',
+                          style: TextStyle(fontSize: 18, color: Colors.red),
+                        ),
+                        SizedBox(height: 10),
+                        ElevatedButton(
+                          onPressed: () {
+                            setState(() {
+                              isLoading = true;
+                              error = null;
+                            });
+                            loadQuotes();
+                          },
+                          child: Text('Retry'),
+                        ),
+                      ],
+                    ),
                   )
-                : Swiper(
-                    itemBuilder: (BuildContext context, int index) {
-                      return _buildQuoteCard(
-                          moodQuotes[widget.mood]?[index] ?? "No quote available");
-                    },
-                    itemCount: moodQuotes[widget.mood]?.length ?? 0,
-                    layout: SwiperLayout.TINDER,
-                    itemWidth: MediaQuery.of(context).size.width * 0.85,
-                    itemHeight: MediaQuery.of(context).size.height * 0.7,
-                  ),
+                : moodQuotes.isEmpty || (moodQuotes[widget.mood]?.isEmpty ?? true)
+                    ? Center(
+                        child: Text('No quotes available for this mood'),
+                      )
+                    : Swiper(
+                        itemBuilder: (BuildContext context, int index) {
+                          return _buildQuoteCard(
+                              moodQuotes[widget.mood]![index]);
+                        },
+                        itemCount: moodQuotes[widget.mood]?.length ?? 0,
+                        layout: SwiperLayout.TINDER,
+                        itemWidth: MediaQuery.of(context).size.width * 0.85,
+                        itemHeight: MediaQuery.of(context).size.height * 0.7,
+                      ),
       ),
     );
   }
